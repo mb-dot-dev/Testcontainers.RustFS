@@ -138,3 +138,59 @@ public sealed class RustFSBuilderValidationTest
         Assert.Throws<ArgumentException>(() => builder.WithSecretKey(secretKey!));
     }
 }
+
+public sealed class RustFSConsoleTest : IAsyncLifetime
+{
+    // Console is combined with custom credentials on purpose: WithConsole() must not drop earlier configuration.
+    private readonly RustFSContainer _container = new RustFSBuilder("rustfs/rustfs:1.0.0")
+        .WithAccessKey("console-access")
+        .WithSecretKey("console-secret")
+        .WithConsole()
+        .Build();
+
+    public ValueTask InitializeAsync() => new(_container.StartAsync(TestContext.Current.CancellationToken));
+
+    public ValueTask DisposeAsync() => _container.DisposeAsync();
+
+    [Fact]
+    public async Task ConsoleIsServedWhenEnabled()
+    {
+        using var http = new HttpClient();
+
+        var response = await http.GetAsync(
+            new Uri(new Uri(_container.GetConsoleAddress()), "rustfs/console/health"),
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task CustomCredentialsSurviveWithConsole()
+    {
+        using var client = new AmazonS3Client("console-access", "console-secret", new AmazonS3Config
+        {
+            ServiceURL = _container.GetConnectionString(),
+            AuthenticationRegion = "us-east-1",
+            ForcePathStyle = true,
+        });
+
+        var buckets = await client.ListBucketsAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.OK, buckets.HttpStatusCode);
+        Assert.Equal("console-access", _container.AccessKey);
+    }
+}
+
+public sealed class RustFSConsoleDisabledTest
+{
+    [Fact]
+    public void GetConsoleAddressThrowsWhenConsoleIsDisabled()
+    {
+        // Built but never started: the flag must be checked before any port lookup.
+        var container = new RustFSBuilder("rustfs/rustfs:1.0.0").Build();
+
+        var exception = Assert.Throws<InvalidOperationException>(() => container.GetConsoleAddress());
+
+        Assert.Contains("WithConsole()", exception.Message);
+    }
+}

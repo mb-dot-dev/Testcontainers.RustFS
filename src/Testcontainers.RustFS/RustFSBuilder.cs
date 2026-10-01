@@ -78,6 +78,21 @@ public sealed class RustFSBuilder : ContainerBuilder<RustFSBuilder, RustFSContai
             .WithEnvironment("RUSTFS_SECRET_KEY", secretKey);
     }
 
+    /// <summary>
+    /// Enables the web console on <see cref="RustFSConsolePort" />. Opt-in, off by default.
+    /// Additive: the console cannot be switched off again once enabled on a builder instance.
+    /// </summary>
+    /// <returns>A configured instance of <see cref="RustFSBuilder" />.</returns>
+    public RustFSBuilder WithConsole()
+    {
+        return Merge(DockerResourceConfiguration, new RustFSConfiguration(consoleEnabled: true))
+            .WithPortBinding(RustFSConsolePort, true)
+            .WithEnvironment("RUSTFS_CONSOLE_ENABLE", "true")
+            .WithEnvironment("RUSTFS_CONSOLE_ADDRESS", $":{RustFSConsolePort}")
+            .WithWaitStrategy(Wait.ForUnixContainer().UntilHttpRequestIsSucceeded(request =>
+                request.ForPath("/rustfs/console/health").ForPort(RustFSConsolePort)));
+    }
+
     /// <inheritdoc />
     public override RustFSContainer Build()
     {

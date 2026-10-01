@@ -27,4 +27,18 @@ public sealed class RustFSContainer : DockerContainer
     {
         return new UriBuilder(Uri.UriSchemeHttp, Hostname, GetMappedPublicPort(RustFSBuilder.RustFSPort)).ToString();
     }
+
+    /// <summary>Gets the web console URL reachable from the host.</summary>
+    /// <returns>The RustFS console URL.</returns>
+    /// <exception cref="InvalidOperationException">The console was not enabled with <c>WithConsole()</c>.</exception>
+    public string GetConsoleAddress()
+    {
+        if (_configuration.ConsoleEnabled != true)
+        {
+            throw new InvalidOperationException(
+                "The RustFS console is disabled; enable it with new RustFSBuilder().WithConsole().");
+        }
+
+        return new UriBuilder(Uri.UriSchemeHttp, Hostname, GetMappedPublicPort(RustFSBuilder.RustFSConsolePort)).ToString();
+    }
 }
