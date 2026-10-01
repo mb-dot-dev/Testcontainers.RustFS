@@ -24,6 +24,9 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
+      # S5332 flags the http:// endpoint URLs this module builds. A RustFS test container serves plain
+      # HTTP on an ephemeral localhost port, so there is no TLS endpoint to address.
+      # (SonarScanner for .NET ignores sonar-project.properties, so settings are passed as /d: args.)
       - name: Install SonarScanner
         run: dotnet tool install --global dotnet-sonarscanner
 
@@ -36,6 +39,10 @@ jobs:
           /o:"mb-dot-dev"
           /d:sonar.token="$SONAR_TOKEN"
           /d:sonar.cs.opencover.reportsPaths="**/TestResults/**/coverage.opencover.xml"
+          /d:sonar.coverage.exclusions="test/**"
+          /d:sonar.issue.ignore.multicriteria=e1
+          /d:sonar.issue.ignore.multicriteria.e1.ruleKey=csharpsquid:S5332
+          /d:sonar.issue.ignore.multicriteria.e1.resourceKey="src/**"
           /d:sonar.qualitygate.wait=true
 
       - name: Build

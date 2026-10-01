@@ -127,7 +127,7 @@ src/Testcontainers.RustFS/
 test/Testcontainers.RustFS.Tests/
   RustFSContainerTest.cs
   Testcontainers.RustFS.Tests.csproj
-README.md  LICENSE  .gitignore  sonar-project.properties
+README.md  LICENSE  .gitignore
 .github/dependabot.yml
 .github/workflows/main.yaml
 .github/workflows/pack_and_publish.yml
@@ -172,8 +172,9 @@ own container. That is three container starts for the suite.
 - **`dependabot.yml`**: copied from `molnarbence/MbUtils.Extensions`. Two ecosystems, `nuget` and
   `github-actions`, weekly, `directory: "/"`, 10 open PRs max, one grouped PR per ecosystem.
 - **`main.yaml`**: `dotnet build` and `dotnet test` with coverage on `ubuntu-latest` (Docker
-  present), then a SonarQube job in the same shape as the Python repo (SHA-pinned actions,
-  quality-gate wait). `sonar-project.properties` points sources at `src/` and tests at `test/`.
+  present), then SonarQube analysis via `dotnet-sonarscanner` begin/end wrapping the build (quality-gate wait).
+  There is no `sonar-project.properties`: SonarScanner for .NET rejects that file, so the settings
+  (coverage report path, test exclusions, the S5332 ignore) are `/d:` arguments in the workflow.
 - **`pack_and_publish.yml`**: modelled on `MbUtils.Extensions`'s workflow of the same name.
   - Trigger: tag push `v*`.
   - Runs in the `mcr.microsoft.com/dotnet/sdk:10.0` container; permissions `contents: read`,
@@ -200,6 +201,6 @@ that the pinned image is overridable.
 - `src/Testcontainers.RustFS/*`: builder, container, configuration, csproj
 - `test/Testcontainers.RustFS.Tests/*`: five integration tests
 - `Testcontainers.RustFS.slnx`, `Directory.Build.props`, `Directory.Packages.props`
-- `.gitignore` (exists), `sonar-project.properties`
+- `.gitignore` (exists)
 - `.github/dependabot.yml`, `.github/workflows/main.yaml`, `.github/workflows/pack_and_publish.yml`
 - `README.md`

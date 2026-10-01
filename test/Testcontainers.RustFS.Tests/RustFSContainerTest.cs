@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Net;
 using Amazon.S3;
 using Amazon.S3.Model;
@@ -192,5 +193,43 @@ public sealed class RustFSConsoleDisabledTest
         var exception = Assert.Throws<InvalidOperationException>(() => container.GetConsoleAddress());
 
         Assert.Contains("WithConsole()", exception.Message);
+    }
+}
+
+/// <summary>
+/// Readiness is only observable as a race against a live container, so these tests read the built wait strategies.
+/// They reflect into Testcontainers' HttpWaitStrategy fields (pinned to the 4.x layout); a rename fails loudly here.
+/// </summary>
+public sealed class RustFSWaitStrategyTest
+{
+    private static List<(string Path, int Port)> HttpChecks(RustFSContainer container)
+    {
+        const BindingFlags flags = BindingFlags.NonPublic | BindingFlags.Instance;
+        var configuration = (RustFSConfiguration)typeof(RustFSContainer).GetField("_configuration", flags)!.GetValue(container)!;
+
+        return configuration.WaitStrategies
+            .Select(w => w.GetType().GetField("_waitUntil", flags)?.GetValue(w))
+            .Where(inner => inner?.GetType().Name == "HttpWaitStrategy")
+            .Select(inner => (
+                Path: (string)inner!.GetType().GetField("_pathValue", flags)!.GetValue(inner)!,
+                Port: Convert.ToInt32(inner.GetType().GetField("_portNumber", flags)!.GetValue(inner)!)))
+            .ToList();
+    }
+
+    [Fact]
+    public void DefaultWaitsForS3Health()
+    {
+        var checks = HttpChecks(new RustFSBuilder("rustfs/rustfs:1.0.0").Build());
+
+        Assert.Equal([("/health", 9000)], checks);
+    }
+
+    [Fact]
+    public void ConsoleWaitsForBothS3AndConsoleHealth()
+    {
+        var checks = HttpChecks(new RustFSBuilder("rustfs/rustfs:1.0.0").WithConsole().Build());
+
+        Assert.Contains(("/health", 9000), checks);
+        Assert.Contains(("/rustfs/console/health", 9001), checks);
     }
 }

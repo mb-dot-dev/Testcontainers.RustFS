@@ -89,8 +89,11 @@ public sealed class RustFSBuilder : ContainerBuilder<RustFSBuilder, RustFSContai
             .WithPortBinding(RustFSConsolePort, true)
             .WithEnvironment("RUSTFS_CONSOLE_ENABLE", "true")
             .WithEnvironment("RUSTFS_CONSOLE_ADDRESS", $":{RustFSConsolePort}")
-            .WithWaitStrategy(Wait.ForUnixContainer().UntilHttpRequestIsSucceeded(request =>
-                request.ForPath("/rustfs/console/health").ForPort(RustFSConsolePort)));
+            // WithWaitStrategy replaces an earlier HTTP wait rather than adding to it, so the S3 check
+            // from Init() is restated here and chained with the console check; both must pass.
+            .WithWaitStrategy(Wait.ForUnixContainer()
+                .UntilHttpRequestIsSucceeded(request => request.ForPath("/health").ForPort(RustFSPort))
+                .UntilHttpRequestIsSucceeded(request => request.ForPath("/rustfs/console/health").ForPort(RustFSConsolePort)));
     }
 
     /// <inheritdoc />
