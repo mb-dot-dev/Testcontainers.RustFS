@@ -58,9 +58,11 @@ public sealed class RustFSBuilder
     public const string DefaultSecretKey = "rustfsadmin";
 
     public RustFSBuilder();                                  // uses RustFSImage
+    public RustFSBuilder(string image);
+    public RustFSBuilder(IImage image);
     public RustFSBuilder WithAccessKey(string accessKey);
     public RustFSBuilder WithSecretKey(string secretKey);
-    public RustFSBuilder WithConsole(bool enabled = true);   // off by default
+    public RustFSBuilder WithConsole();                      // opt-in, off by default; additive
     public override RustFSContainer Build();
 }
 
