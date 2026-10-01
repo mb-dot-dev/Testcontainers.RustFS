@@ -1,0 +1,37 @@
+name: Pack and publish
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  pack_and_publish:
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/dotnet/sdk:10.0
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Pack
+        run: |
+          VERSION="${GITHUB_REF##*/}"
+          VERSION="${VERSION#v}"
+          dotnet pack src/Testcontainers.RustFS -c Release -o ./packages -p:PackageVersion="$VERSION"
+
+      - name: NuGet login (OIDC -> temp API key)
+        uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841 # v1.2.0
+        id: login
+        with:
+          user: ${{ secrets.NUGET_USER }}
+
+      - name: Push to NuGet
+        run: >
+          dotnet nuget push ./packages/*.nupkg
+          -s https://api.nuget.org/v3/index.json
+          --api-key ${{ steps.login.outputs.NUGET_API_KEY }}
+          --no-symbols
