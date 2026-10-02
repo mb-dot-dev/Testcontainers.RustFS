@@ -1,0 +1,60 @@
+name: Main
+run-name: Build & test
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sonarqube:
+    name: Build, test & SonarQube
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
+
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: 10.0.x
+
+      # S5332 flags the http:// endpoint URLs this module builds. A RustFS test container serves plain
+      # HTTP on an ephemeral localhost port, so there is no TLS endpoint to address.
+      # (SonarScanner for .NET ignores sonar-project.properties, so settings are passed as /d: args.)
+      - name: Install SonarScanner
+        run: dotnet tool install --global dotnet-sonarscanner
+
+      - name: Begin analysis
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: >
+          dotnet sonarscanner begin
+          /k:"mb-dot-dev_Testcontainers.RustFS"
+          /o:"mb-dot-dev"
+          /d:sonar.token="$SONAR_TOKEN"
+          /d:sonar.cs.opencover.reportsPaths="**/TestResults/**/coverage.opencover.xml"
+          /d:sonar.coverage.exclusions="test/**"
+          /d:sonar.issue.ignore.multicriteria=e1
+          /d:sonar.issue.ignore.multicriteria.e1.ruleKey=csharpsquid:S5332
+          /d:sonar.issue.ignore.multicriteria.e1.resourceKey="src/**"
+          /d:sonar.qualitygate.wait=true
+
+      - name: Build
+        run: dotnet build -c Release
+
+      - name: Test
+        run: >
+          dotnet test -c Release --no-build
+          --collect:"XPlat Code Coverage"
+          -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+
+      - name: End analysis
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: dotnet sonarscanner end /d:sonar.token="$SONAR_TOKEN"

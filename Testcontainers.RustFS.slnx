@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Testcontainers.RustFS/Testcontainers.RustFS.csproj" />
+  </Folder>
+  <Folder Name="/test/">
+    <Project Path="test/Testcontainers.RustFS.Tests/Testcontainers.RustFS.Tests.csproj" />
+  </Folder>
+</Solution>
