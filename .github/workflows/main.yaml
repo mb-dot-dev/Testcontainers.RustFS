@@ -38,7 +38,7 @@ jobs:
           /k:"mb-dot-dev_Testcontainers.RustFS"
           /o:"mb-dot-dev"
           /d:sonar.token="$SONAR_TOKEN"
-          /d:sonar.cs.opencover.reportsPaths="**/TestResults/**/coverage.opencover.xml"
+          /d:sonar.cs.vscoveragexml.reportsPaths="**/TestResults/**/coverage.xml"
           /d:sonar.coverage.exclusions="test/**"
           /d:sonar.issue.ignore.multicriteria=e1
           /d:sonar.issue.ignore.multicriteria.e1.ruleKey=csharpsquid:S5332
@@ -51,8 +51,7 @@ jobs:
       - name: Test
         run: >
           dotnet test -c Release --no-build
-          --collect:"XPlat Code Coverage"
-          -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+          --coverage --coverage-output-format xml --coverage-output coverage.xml
 
       - name: End analysis
         env:
