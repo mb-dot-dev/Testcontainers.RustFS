@@ -15,20 +15,23 @@ jobs:
   sonarqube:
     name: Build, test & SonarQube
     runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/mb-dot-dev/gha-sdk-images:1.0.0
+      # Testcontainers starts the RustFS container on the host's Docker daemon
+      volumes:
+        - /var/run/docker.sock:/var/run/docker.sock
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
 
-      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
-        with:
-          dotnet-version: 10.0.x
-
       # S5332 flags the http:// endpoint URLs this module builds. A RustFS test container serves plain
       # HTTP on an ephemeral localhost port, so there is no TLS endpoint to address.
       # (SonarScanner for .NET ignores sonar-project.properties, so settings are passed as /d: args.)
       - name: Install SonarScanner
-        run: dotnet tool install --global dotnet-sonarscanner
+        run: |
+          dotnet tool install --global dotnet-sonarscanner
+          echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
 
       - name: Begin analysis
         env:
